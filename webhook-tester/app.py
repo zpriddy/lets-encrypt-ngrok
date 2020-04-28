@@ -25,17 +25,37 @@ else:
 
 app = Flask(__name__)
 
+
 @app.route("/<path:path>", methods=["POST", "GET"])
 @app.route("/", methods=["POST", "GET"])
 def index(path=None):
     if request.method == "GET":
         return "<h1>Hello from Webhook Listener!</h1>"
     if request.method == "POST":
-        filename = logs_dir + ((path + "-") if path else "") + str(datetime.datetime.now().isoformat()) + ".log"
+        filename = (
+            logs_dir
+            + ((path + "-") if path else "")
+            + str(datetime.datetime.now().isoformat())
+            + ".json"
+        )
         with open(filename, "w") as f:
-            f.write(str(request.headers))
-            f.write(str(request.method) + "\n" + "Path: " + str(path) + "\n\n")
-            f.write(json.dumps(request.json, indent=4, sort_keys=True))
+            headers = {}
+            for key in request.headers.keys():
+                headers[key] = request.headers.get_all(key)
+
+            log_data = {
+                "headers": headers,
+                "method": request.method,
+                "path": request.path,
+                "query_string": request.query_string.decode(),
+                "args": request.args.to_dict(),
+                "data": {
+                    "json": request.json,
+                    "form": request.form.to_dict(),
+                    "text": request.data.decode(),
+                }
+            }
+            f.write(json.dumps(log_data, indent=4, sort_keys=True))
         return '{"success":"true"}'
 
 
