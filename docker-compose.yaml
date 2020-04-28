@@ -1,0 +1,48 @@
+version: "2.1"
+services:
+  ngrok:
+    entrypoint: ./entrypoint.sh
+    build:
+      context: ./docker-ngrok
+    volumes:
+      - ./lets-encrypt-config:/config
+    env_file:
+      - lets-encrypt-ngrok.env
+    environment:
+      - LETS_ENCRYPT=/config
+    networks:
+      - letsencrypt
+    ports:
+      - "4040:4040"
+  letsencrypt:
+    image: linuxserver/letsencrypt
+    container_name: letsencrypt
+    volumes:
+      - ./lets-encrypt-config:/config
+    networks:
+      - letsencrypt
+    env_file:
+      - lets-encrypt-ngrok.env
+    ports:
+      - "8888:80"
+      - "8443:443"
+    links:
+      - ngrok
+  webhook:
+    build:
+      context: ./webhook-tester
+    volumes:
+    - ./webhook-tester:/usr/src/app
+    - ./webhook-logs:/webhook-logs
+    ports:
+    - "5000:5000"
+    expose:
+      - 5000
+    env_file:
+      - lets-encrypt-ngrok.env
+    links:
+      - ngrok
+    networks:
+      - letsencrypt
+networks:
+  letsencrypt:
